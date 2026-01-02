@@ -1,0 +1,4 @@
+{
+	"files.insertFinalNewline": true,
+	"eslint.experimental.useFlatConfig": true
+}

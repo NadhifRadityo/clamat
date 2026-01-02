@@ -1,0 +1,38 @@
+{
+	"include": [
+		"."
+	],
+	"exclude": [
+		".private/",
+		"node_modules/"
+	],
+	"compilerOptions": {
+		"noEmit": true,
+		"sourceMap": true,
+		"esModuleInterop": true,
+		"resolveJsonModule": true,
+		"downlevelIteration": true,
+		"experimentalDecorators": true,
+		"allowSyntheticDefaultImports": true,
+		"allowJs": true,
+		"skipLibCheck": true,
+		"strict": false,
+		"strictNullChecks": true,
+		"strictBindCallApply": true,
+		// "strictFunctionTypes": true,
+		"strictPropertyInitialization": true,
+		"forceConsistentCasingInFileNames": true,
+		"incremental": true,
+		"isolatedModules": true,
+		"moduleResolution": "bundler",
+		"module": "ESNext",
+		"target": "ESNext",
+		"lib": [
+			"ESNext",
+			"DOM",
+			"DOM.Iterable"
+		],
+		"rootDir": ".",
+		"baseUrl": "."
+	}
+}
