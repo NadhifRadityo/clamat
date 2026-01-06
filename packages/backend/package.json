@@ -1,0 +1,16 @@
+{
+	"name": "@clamat/backend",
+	"private": true,
+	"version": "1.0.0",
+	"description": "",
+	"author": "Nadhif Radityo",
+	"license": "ISC",
+	"type": "module",
+	"scripts": {
+		"lint": "eslint .",
+		"build": "node -e ''"
+	},
+	"dependencies": {
+		"multicast-dns": "^7.2.5"
+	}
+}

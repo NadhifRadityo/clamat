@@ -7,10 +7,6 @@ settings:
 importers:
 
   .:
-    dependencies:
-      multicast-dns:
-        specifier: ^7.2.5
-        version: 7.2.5
     devDependencies:
       '@eslint/compat':
         specifier: ^2.0.0
@@ -39,6 +35,12 @@ importers:
       typescript-eslint:
         specifier: ^8.51.0
         version: 8.51.0(eslint@9.39.2)(typescript@5.9.3)
+
+  packages/backend:
+    dependencies:
+      multicast-dns:
+        specifier: ^7.2.5
+        version: 7.2.5
 
 packages:
 

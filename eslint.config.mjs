@@ -11,22 +11,12 @@ import eslintTypescript from "typescript-eslint";
 const gitignoreFile = path.join(import.meta.dirname, ".gitignore");
 const tsConfigFile = path.join(import.meta.dirname, "tsconfig.json");
 
-export default defineConfig([
+export const rootConfig = [
 	includeIgnoreFile(gitignoreFile),
 	eslintJavascript.configs.recommended,
 	{ files: ["**/*.ts"], extends: [eslintTypescript.configs.recommended] },
 	eslintStylistic.configs.recommended,
 	{
-		languageOptions: {
-			parser: eslintTypescript.parser,
-			parserOptions: {
-				project: tsConfigFile,
-				tsconfigRootDir: import.meta.dirname
-			},
-			globals: {
-				...globals.node
-			}
-		},
 		plugins: {
 			"perfectionist": eslintPerfectionist,
 			"unused-imports": eslintUnusedImports
@@ -146,4 +136,20 @@ export default defineConfig([
 			"@stylistic/no-multi-spaces": ["warn", { ignoreEOLComments: true }]
 		}
 	}
+];
+
+export default defineConfig([
+	{
+		languageOptions: {
+			parser: eslintTypescript.parser,
+			parserOptions: {
+				project: tsConfigFile,
+				tsconfigRootDir: import.meta.dirname
+			},
+			globals: {
+				...globals.node
+			}
+		}
+	},
+	...rootConfig
 ]);
