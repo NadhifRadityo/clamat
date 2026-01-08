@@ -3,8 +3,6 @@ import path from "path";
 import { Command } from "commander";
 import forge from "node-forge";
 
-import { generateSerialNumberFromPublicKey } from "./certUtils";
-
 const cli = new Command()
 	.requiredOption("-o, --out-dir <dir>", "Output directory", path.join(import.meta.dirname, "./certs/"))
 	.requiredOption("-n, --common-name <name>", "Common Name (CN)", "Clamat Root CA")
@@ -16,7 +14,7 @@ const cliOptions = cli.opts();
 const keys = forge.pki.rsa.generateKeyPair({ bits: cliOptions.bits, e: 0x10001 });
 const cert = forge.pki.createCertificate();
 cert.publicKey = keys.publicKey;
-cert.serialNumber = generateSerialNumberFromPublicKey(keys.publicKey).toString("hex");
+cert.serialNumber = forge.util.bytesToHex(forge.random.getBytesSync(16));
 const now = new Date();
 cert.validity.notBefore = now;
 cert.validity.notAfter = new Date(now.getTime() + cliOptions.days * 24 * 60 * 60 * 1000);

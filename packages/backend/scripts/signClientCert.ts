@@ -3,8 +3,6 @@ import path from "path";
 import { Command } from "commander";
 import forge from "node-forge";
 
-import { generateSerialNumberFromPublicKey } from "./certUtils";
-
 const cli = new Command()
 	.requiredOption("-c, --csr <file>", "CSR file to sign")
 	.requiredOption("-k, --root-key <file>", "Root CA private key PEM", path.join(import.meta.dirname, "./certs/rootCA.key.pem"))
@@ -24,7 +22,7 @@ const rootKey = forge.pki.privateKeyFromPem(rootKeyPem);
 const rootCert = forge.pki.certificateFromPem(rootCertPem);
 const cert = forge.pki.createCertificate();
 cert.publicKey = csr.publicKey!;
-cert.serialNumber = generateSerialNumberFromPublicKey(csr.publicKey!).toString("hex");
+cert.serialNumber = forge.util.bytesToHex(forge.random.getBytesSync(16));
 const now = new Date();
 cert.validity.notBefore = now;
 cert.validity.notAfter = new Date(now.getTime() + cliOptions.days * 24 * 60 * 60 * 1000);
