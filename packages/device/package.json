@@ -1,0 +1,32 @@
+{
+	"name": "@clamat/device",
+	"private": true,
+	"version": "1.0.0",
+	"description": "",
+	"author": "Nadhif Radityo",
+	"license": "ISC",
+	"type": "module",
+	"scripts": {
+		"lint": "eslint .",
+		"build:compile": "tsx build.ts -m compile",
+		"build:clean": "tsx build.ts -m clean",
+		"drizzle-kit": "drizzle-kit"
+	},
+	"exports": {
+		".": "./src/index.ts",
+		"./db": "./src/db.ts"
+	},
+	"dependencies": {
+		"@clamat/shared": "workspace:*",
+		"@hono/node-server": "^1.19.8",
+		"@libsql/client": "^0.17.0",
+		"drizzle-orm": "^0.45.1",
+		"hono": "^4.11.3",
+		"multicast-dns": "^7.2.5"
+	},
+	"devDependencies": {
+		"@clamat/build-tools": "workspace:*",
+		"@types/multicast-dns": "^7.2.4",
+		"drizzle-kit": "^0.31.8"
+	}
+}

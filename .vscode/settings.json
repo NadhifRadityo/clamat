@@ -1,5 +1,6 @@
 {
 	"files.insertFinalNewline": true,
 	"eslint.experimental.useFlatConfig": true,
-	"editor.insertSpaces": false
+	"editor.insertSpaces": false,
+	"typescript.tsdk": "node_modules\\typescript\\lib"
 }

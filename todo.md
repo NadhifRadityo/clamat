@@ -1,0 +1,21 @@
+- cleanup device/index.ts
+  - service discovery mechanism
+  - https server, mtls, client and server verification chain
+  - webrtc signaling endpoint
+- research
+  - mechanism to raft?
+  - rtp clock source?
+  - data/state saving/persistent mechanism?
+  - multi connection? p2p? client-server? 1-client-multi-servers?
+  - data saving?
+  - sensor module extension?
+- website
+  - person
+  - bind person to device
+  - new session
+    - add device to session
+	- allow device/console to talk to each other
+  - visualization
+
+- database modular system, with foreign key??
+- setup esbuild

@@ -1,0 +1,24 @@
+{
+	"name": "@clamat/shared",
+	"private": true,
+	"version": "1.0.0",
+	"description": "",
+	"author": "Nadhif Radityo",
+	"license": "ISC",
+	"type": "module",
+	"scripts": {
+		"lint": "eslint .",
+		"build": "node -e ''"
+	},
+	"exports": {
+		".": "./src/index.ts",
+		"./crypto": "./src/crypto.ts"
+	},
+	"dependencies": {
+		"@peculiar/asn1-csr": "^2.6.0",
+		"@peculiar/asn1-rsa": "^2.6.0",
+		"@peculiar/asn1-schema": "^2.6.0",
+		"@peculiar/asn1-x509": "^2.6.0",
+		"@peculiar/x509": "^1.14.2"
+	}
+}
