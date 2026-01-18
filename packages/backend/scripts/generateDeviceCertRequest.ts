@@ -8,7 +8,11 @@ const cli = new Command()
 	.addOption(new Option("-n, --common-name <name>", "Common Name (CN)").makeOptionMandatory())
 	.addOption(new Option("-b, --bits <n>", "RSA key size").makeOptionMandatory().argParser(v => parseInt(v)).default(2048))
 	.parse();
-const cliOptions = cli.opts();
+const cliOptions = cli.opts<{
+	outDir: string;
+	commonName: string;
+	bits: number;
+}>();
 
 const deviceKeys = await webcrypto.subtle.generateKey(
 	{

@@ -10,7 +10,13 @@ const cli = new Command()
 	.addOption(new Option("-o, --out-dir <dir>", "Output directory").makeOptionMandatory().default(path.join(import.meta.dirname, "./certs/")))
 	.addOption(new Option("-d, --days <n>", "Validity days").makeOptionMandatory().argParser(v => parseInt(v)).default(365))
 	.parse();
-const cliOptions = cli.opts();
+const cliOptions = cli.opts<{
+	csr: string;
+	rootKey: string;
+	rootCert: string;
+	outDir: string;
+	days: number;
+}>();
 
 const deviceCertRequestDer = await fs.readFile(cliOptions.csr);
 const rootKeyDer = await fs.readFile(cliOptions.rootKey);

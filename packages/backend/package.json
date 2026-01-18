@@ -10,8 +10,8 @@
 		"lint": "eslint .",
 		"build": "node -e ''",
 		"generate-root-cert": "tsx ./scripts/generateRootCert.ts",
-		"generate-device-csr": "tsx ./scripts/generateDeviceCert.ts",
-		"sign-device-cert": "tsx ./scripts/signDeviceCert.ts"
+		"generate-device-cert-request": "tsx ./scripts/generateDeviceCertRequest.ts",
+		"sign-device-cert-request": "tsx ./scripts/signDeviceCertRequest.ts"
 	},
 	"exports": {
 		".": "./src/index.ts"

@@ -9,7 +9,12 @@ const cli = new Command()
 	.addOption(new Option("-d, --days <n>", "Validity days").makeOptionMandatory().argParser(v => parseInt(v)).default(3650))
 	.addOption(new Option("-b, --bits <n>", "RSA key size").makeOptionMandatory().argParser(v => parseInt(v)).default(4096))
 	.parse();
-const cliOptions = cli.opts();
+const cliOptions = cli.opts<{
+	outDir: string;
+	commonName: string;
+	days: number;
+	bits: number;
+}>();
 
 const rootKeys = await webcrypto.subtle.generateKey(
 	{

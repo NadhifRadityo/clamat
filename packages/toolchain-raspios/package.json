@@ -1,0 +1,17 @@
+{
+	"name": "@clamat/toolchain-raspios",
+	"private": true,
+	"version": "1.0.0",
+	"description": "",
+	"author": "Nadhif Radityo",
+	"license": "ISC",
+	"type": "module",
+	"scripts": {
+		"lint": "eslint .",
+		"build": "node -e ''",
+		"generate-docker-image": "tsx ./scripts/createDockerImage.ts"
+	},
+	"dependencies": {
+		"dax": "^0.44.2"
+	}
+}
