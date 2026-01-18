@@ -1,6 +1,6 @@
 import dgram from "dgram";
-import fs from "fs/promises";
 import fs0 from "fs";
+import fs from "fs/promises";
 import https from "https";
 import net from "net";
 import os from "os";
@@ -16,8 +16,18 @@ import makeMdns from "multicast-dns";
 
 import * as dbSchema from "./db";
 
-const deviceKeyDer = await fs.readFile(process.env.DEVICE_KEY_DER!);
-const deviceCertChainDer = await fs.readFile(process.env.DEVICE_CERT_CHAIN_DER!);
+declare global {
+	interface ImportMetaEnv {
+		readonly BUILD_ID: string;
+	}
+	interface ImportMeta {
+		readonly env: ImportMetaEnv;
+	}
+}
+
+const homeDirectory = path.join(process.env.CLAMAT_HOME_DIRECTORY!, import.meta.env.BUILD_ID);
+const deviceKeyDer = await fs.readFile(path.join(homeDirectory, "device.key.der"));
+const deviceCertChainDer = await fs.readFile(path.join(homeDirectory, "device.chain.der"));
 const deviceKey = await webcrypto.subtle.importKey(
 	"pkcs8",
 	deviceKeyDer,
@@ -37,7 +47,7 @@ const deviceCert = deviceCertChain[0];
 const intermediateCerts = deviceCertChain.slice(1, -1);
 const rootCert = deviceCertChain.at(-1)!;
 const serialNumber = serialNumberFromPublicKey(await deviceCert.publicKey.export());
-const dbPath = path.join(process.env.DATABASE_BASE_PATH!, `${serialNumber}-core.db`);
+const dbPath = path.join(homeDirectory, `databases/${serialNumber}-core/database.db`);
 const dbClient = dbCreateClient({ url: `file:${dbPath}`, encryptionKey: await encryptionKeyFromPrivateKey(deviceKey, "core-db") });
 const db = drizzle(dbClient, { schema: dbSchema });
 
@@ -52,7 +62,7 @@ const getMigrationFiles = async (filePath: string) => {
 	throw new Error(`Cannot find migration file with path ${filePath}`);
 };
 await (async () => {
-	const migrationsFolder = path.join(process.env.DATABASE_BASE_PATH!, `${serialNumber}-migrations`);
+	const migrationsFolder = path.join(homeDirectory, `databases/${serialNumber}-core/migrations/`);
 	if(!fs0.existsSync(path.join(migrationsFolder, "/meta/_journal.json"))) {
 		const journal = JSON.parse(await getMigrationFiles("/meta/_journal.json"));
 		for(let i = 0; i < journal.entries.length; i++) {

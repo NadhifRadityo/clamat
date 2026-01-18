@@ -9,15 +9,19 @@ export { default as commonjs } from "@rollup/plugin-commonjs";
 export * from "@rollup/plugin-node-resolve";
 export { default as nodeResolve } from "@rollup/plugin-node-resolve";
 export { importMetaAssets } from "@web/rollup-plugin-import-meta-assets";
+export { default as replace } from "@rollup/plugin-replace";
 export { bundleStats } from "rollup-plugin-bundle-stats";
 export { default as progress } from "rollup-plugin-progress";
 export * from "estree-toolkit";
 export * from "estree-walker";
 export { default as MagicString } from "magic-string";
 
+import { execFile } from "child_process";
+import crypto from "crypto";
 import fs0 from "fs";
 import fs from "fs/promises";
 import path from "path";
+import zlib from "zlib";
 import { createFilter, FilterPattern } from "@rollup/pluginutils";
 import { Expression, CallExpression, TemplateLiteral, BinaryExpression } from "estree";
 import { is } from "estree-toolkit";
@@ -195,4 +199,200 @@ export const __synthetic = module;`;
 			};
 		}
 	} as Plugin;
+}
+
+export async function generateBuildMetadata(options_: { base?: string, allowReadFileDirectly?: boolean, includeUnstaged?: boolean, includeUntracked?: boolean }) {
+	const options = {
+		base: process.cwd(),
+		allowReadFileDirectly: true,
+		includeUnstaged: true,
+		includeUntracked: true,
+		...options_
+	};
+	const gitRoot = await (async () => {
+		const base = options.base;
+		const dirRoot = path.parse(base).root;
+		let dir = base;
+		let attempts = 0;
+		while(dir != dirRoot && attempts++ < 30) {
+			try {
+				await fs.access(path.join(dir, ".git"), fs.constants.R_OK);
+				const stat = await fs.stat(path.join(dir, ".git"));
+				if(stat.isDirectory()) return dir;
+				const gitDirContent = await fs.readFile(path.join(dir, ".git"), "utf8");
+				const gitDirIndex = gitDirContent.includes("gitdir:") ? gitDirContent.indexOf("gitdir:") + "gitdir:".length : 0;
+				// eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
+				const gitDirEndIndex = (gitDirContent.indexOf("\n", gitDirIndex) + 1) || gitDirContent.length;
+				const gitDir = gitDirContent.slice(gitDirIndex, gitDirEndIndex).trim();
+				return path.join(dir, gitDir);
+			} catch(_) {
+				dir = path.dirname(dir);
+			}
+		}
+		throw new Error("Cannot find git project");
+	})();
+	const gitFile = (gitRoot: string, ...args: string[]) => path.join(gitRoot, ".git", ...args);
+	const gitArgs = (changeDir: string, gitRoot: string, ...args: string[]) => ["-C", changeDir, `--git-dir=${path.join(gitRoot, ".git")}`, `--work-tree=${gitRoot}`, ...args];
+	const generateSHA1 = (string: string) => { const shasum = crypto.createHash("sha1"); shasum.update(string); return shasum.digest("hex"); };
+	const runCmd = async (cwd: string, cmd: string, args: string[]) => {
+		console.log(`Executing ${JSON.stringify(`${cmd} ${args.join(" ")}`)}`);
+		return new Promise<string>((resolve, reject) => {
+			const childProcess = execFile(cmd, args, { cwd, encoding: "utf-8" }, (error, stdout, stderr) => {
+				if(error == null && childProcess.exitCode != null && childProcess.exitCode < 0)
+					error = new Error(`Command failed with exit code ${childProcess.exitCode}: ${cmd} ${args.join(" ")}\n${stderr}`);
+				if(error != null) {
+					reject(error);
+					return;
+				}
+				resolve(stdout);
+			});
+			childProcess.addListener("error", e => reject(e));
+		});
+	};
+	const parseGitDate = (timeStamp: string, timeOffset: string) => {
+		const timestampMs = parseInt(timeStamp, 10) * 1000;
+		const offsetSign = timeOffset[0] == "+" ? 1 : -1;
+		const offsetHours = parseInt(timeOffset.slice(1, 3), 10);
+		const offsetMinutes = parseInt(timeOffset.slice(3, 5), 10);
+		const offsetMs = offsetSign * (offsetHours * 3600 + offsetMinutes * 60) * 1000;
+		return new Date(timestampMs - offsetMs);
+	};
+	const parseGitCommitObject = (commitObject: string) => {
+		const fullRegex = /^(tree\s+[a-zA-Z0-9]{40})((?:\r?\nparent\s+[a-zA-Z0-9]{40})+)(\r?\nauthor\s(?:[^<]+)\s+<(?:[^>]+)>\s+(?:[0-9]+)\s+(?:[+-][0-9]{4}))(\r?\ncommitter\s(?:[^<]+)\s+<(?:[^>]+)>\s+(?:[0-9]+)\s+(?:[+-][0-9]{4}))(\r?\ngpgsig\s+(?:-+\s*BEGIN\s+[a-zA-Z0-9_.\-$\s]+\s*-+)\s*?(?:\r?\n.*)*?\r?\n\s*(?:-+\s*END\s+[a-zA-Z0-9_.\-$\s]+\s*-+))?\r?\n\r?\n((?:.|\r?\n)+)$/gm;
+		const fullMatcher = fullRegex.exec(commitObject);
+		if(fullMatcher == null)
+			return null;
+		const treeRegex = /tree\s+([a-zA-Z0-9]{40})/gm;
+		const parentRegex = /parent\s+([a-zA-Z0-9]{40})/gm;
+		const authorRegex = /author\s(?<name>[^<]+)\s+<(?<email>[^>]+)>\s+(?<timeStamp>[0-9]+)\s+(?<timeOffset>[+-][0-9]{4})/gm;
+		const committerRegex = /committer\s(?<name>[^<]+)\s+<(?<email>[^>]+)>\s+(?<timeStamp>[0-9]+)\s+(?<timeOffset>[+-][0-9]{4})/gm;
+		const gpgSigRegex = /gpgsig\s+((?:-+\s*BEGIN\s+[a-zA-Z0-9_.\-$\s]+\s*-+)\s*?(?:\r?\n.*)*?\r?\n\s*(?:-+\s*END\s+[a-zA-Z0-9_.\-$\s]+\s*-+))\s*/gm;
+		const tree = treeRegex.exec(fullMatcher[1].trim())![1].trim();
+		const parents = [...fullMatcher[2].trim().matchAll(parentRegex)].map(m => m[1].trim());
+		const author = authorRegex.exec(fullMatcher[3].trim())!.groups!;
+		const committer = committerRegex.exec(fullMatcher[4].trim())!.groups!;
+		const gpgSig = fullMatcher[5] != null ? gpgSigRegex.exec(fullMatcher[5].trim())![1] : null;
+		author.name = author.name.trim();
+		author.email = author.email.trim();
+		author.timeStamp = author.timeStamp.trim();
+		author.timeOffset = author.timeOffset.trim();
+		author.time = parseGitDate(author.timeStamp, author.timeOffset).toISOString();
+		committer.name = committer.name.trim();
+		committer.email = committer.email.trim();
+		committer.timeStamp = committer.timeStamp.trim();
+		committer.timeOffset = committer.timeOffset.trim();
+		committer.time = parseGitDate(committer.timeStamp, committer.timeOffset).toISOString();
+		return { tree, parents, author, committer, gpgSig };
+	};
+	const getGitHeadCommitId = async (
+		{ base, gitRoot, allowReadFileDirectly }:
+		{ base: string, gitRoot: string, allowReadFileDirectly: boolean }
+	) => {
+		let readFileError = null;
+		if(allowReadFileDirectly) {
+			try {
+				const headRefContent = await fs.readFile(gitFile(gitRoot, "HEAD"), "utf-8");
+				const headRefIndex = headRefContent.includes("ref:") ? headRefContent.indexOf("ref:") + "ref:".length : 0;
+				// eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
+				const headRefEndIndex = (headRefContent.indexOf("\n", headRefIndex) + 1) || headRefContent.length;
+				const headRef = headRefContent.slice(headRefIndex, headRefEndIndex).trim();
+				if(headRef == "")
+					throw new Error("Git HEAD file does not have ref");
+				const commitId = (await fs.readFile(gitFile(gitRoot, headRef), "utf-8")).trim();
+				if(commitId == "")
+					throw new Error("Git REF file is empty");
+				return commitId;
+			} catch(e) {
+				readFileError = e;
+			}
+		}
+		try {
+			const commitId = (await runCmd(base, "git", gitArgs(base, gitRoot, "rev-parse", "HEAD"))).trim();
+			if(commitId == "") throw new Error("Output of `git rev-parse HEAD` is empty");
+			return commitId;
+		} catch(e) {
+			if(readFileError != null)
+				e.cause = readFileError;
+			throw e;
+		}
+	};
+	const getGitCommitObject = async (
+		{ base, gitRoot, commitId, allowReadFileDirectly }:
+		{ base: string, gitRoot: string, commitId: string, allowReadFileDirectly: boolean }
+	) => {
+		let readFileError = null;
+		if(allowReadFileDirectly) {
+			try {
+				const commitObjectFile = gitFile(gitRoot, "objects", commitId.slice(0, 2), commitId.slice(2));
+				const commitObject = await new Promise<string>((resolve, reject) => fs.readFile(commitObjectFile).then(
+					c => zlib.inflate(c, (e, r) => { if(e != null) reject(e); else resolve(r.toString("utf-8")); }),
+					e => reject(e)));
+				const parsedCommitObject = parseGitCommitObject(commitObject);
+				if(parsedCommitObject == null)
+					throw new Error("Cannot parse commit object file");
+				return parsedCommitObject;
+			} catch(e) {
+				readFileError = e;
+			}
+		}
+		try {
+			const commitObject = await runCmd(base, "git", gitArgs(base, gitRoot, "cat-file", "-p", commitId));
+			const parsedCommitObject = parseGitCommitObject(commitObject);
+			if(parsedCommitObject == null)
+				throw new Error("Cannot parse commit object file");
+			return parsedCommitObject;
+		} catch(e) {
+			if(readFileError != null)
+				e.cause = readFileError;
+			throw e;
+		}
+	};
+	const getGitFileStats = async (
+		{ base, gitRoot, includeUnstaged, includeUntracked }:
+		{ base: string, gitRoot: string, includeUnstaged: boolean, includeUntracked: boolean }
+	) => {
+		const listFiles = (await runCmd(base, "git", gitArgs(base, gitRoot,
+			"ls-files", ...(includeUnstaged ? ["--modified"] : []), ...(includeUntracked ? ["--others"] : []),
+			"--exclude-standard", "--exclude='node_modules'", "--exclude='dist'")))
+			.split("\n").map(f => f.trim()).filter(f => f.length > 0);
+		const fileStatsSettled = await Promise.allSettled(listFiles.map(async f => [f.replaceAll("\\", "/"), await fs.stat(path.join(base, f))] as const));
+		const errors = fileStatsSettled.filter((s): s is PromiseRejectedResult => s.status == "rejected" && s.reason.code != "ENOENT").map(s => s.reason);
+		if(errors.length > 0)
+			throw new Error("Cannot stat files", { cause: errors });
+		return fileStatsSettled.filter(s => s.status == "fulfilled").map(s => s.value);
+	};
+	const staticBuildDate = global.staticBuildDate ??= (new Date()).toISOString();
+	const generateBuildMetadata = async () => {
+		const { base, allowReadFileDirectly, includeUnstaged, includeUntracked } = options;
+		const commitIdPromise = getGitHeadCommitId({ base, gitRoot, allowReadFileDirectly });
+		const commitObjectPromise = commitIdPromise.then(v => getGitCommitObject({ base, gitRoot, commitId: v, allowReadFileDirectly }));
+		const unstagedUntrackedFileStatsPromise = includeUnstaged || includeUntracked ? getGitFileStats({ base, gitRoot, includeUnstaged, includeUntracked }) : null;
+		const [commitId, commitObject, unstagedUntrackedFileStats] = await Promise.all(
+			[commitIdPromise, commitObjectPromise, unstagedUntrackedFileStatsPromise]);
+		const unstagedUntrackedId = unstagedUntrackedFileStats == null || unstagedUntrackedFileStats.length == 0 ? null :
+			generateSHA1(unstagedUntrackedFileStats.map(([f, s]) => `${f}:${s.ino}:${s.size}:${s.blocks}:${s.mtime}`).join("\n"));
+		const buildId = `${commitId}${unstagedUntrackedId != null ? `-${unstagedUntrackedId}` : ""}`;
+		const buildDate = new Date(Math.max(Date.parse(staticBuildDate), ...(unstagedUntrackedFileStats != null ? unstagedUntrackedFileStats.map(([_, s]) => s.mtime.getTime()) : [])));
+		console.log(`Generated new build id: ${buildId} ${buildDate.toISOString()}`);
+		const buildMetadata = {
+			BUILD_ID: buildId,
+			BUILD_DATE: buildDate.toISOString(),
+			BUILD_COMMIT_ID: commitId,
+			BUILD_COMMIT_TREE: commitObject.tree,
+			BUILD_COMMIT_PARENTS: JSON.stringify(commitObject.parents),
+			BUILD_COMMIT_AUTHOR_NAME: commitObject.author.name,
+			BUILD_COMMIT_AUTHOR_EMAIL: commitObject.author.email,
+			BUILD_COMMIT_AUTHOR_TIME: commitObject.author.time,
+			BUILD_COMMIT_AUTHOR_TIMESTAMP: commitObject.author.timeStamp,
+			BUILD_COMMIT_AUTHOR_TIMEOFFSET: commitObject.author.timeOffset,
+			BUILD_COMMIT_COMMITTER_NAME: commitObject.committer.name,
+			BUILD_COMMIT_COMMITTER_EMAIL: commitObject.committer.email,
+			BUILD_COMMIT_COMMITTER_TIME: commitObject.committer.time,
+			BUILD_COMMIT_COMMITTER_TIMESTAMP: commitObject.committer.timeStamp,
+			BUILD_COMMIT_COMMITTER_TIMEOFFSET: commitObject.committer.timeOffset,
+			BUILD_COMMIT_GPG_SIGNATURE: commitObject.gpgSig ?? ""
+		};
+		return buildMetadata;
+	};
+	return await generateBuildMetadata();
 }

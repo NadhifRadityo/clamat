@@ -1,7 +1,7 @@
 import fs from "fs/promises";
 import path from "path";
+import { x509, webcrypto } from "@clamat/shared/crypto";
 import { Option, Command } from "commander";
-import { x509, webcrypto } from "packages/shared/src/crypto";
 
 const cli = new Command()
 	.addOption(new Option("-o, --out-dir <dir>", "Output directory").makeOptionMandatory().default(path.join(import.meta.dirname, "./certs/")))

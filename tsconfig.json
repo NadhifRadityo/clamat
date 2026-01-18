@@ -32,7 +32,6 @@
 			"DOM",
 			"DOM.Iterable"
 		],
-		"rootDir": ".",
-		"baseUrl": "."
+		"rootDir": "."
 	}
 }

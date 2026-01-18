@@ -1,6 +1,6 @@
 import fs from "fs/promises";
 import path from "path";
-import { swc, json, rollup, commonjs, progress, bundleStats, nodeResolve, importMetaAssets, nativeAddonLoader, dynamicRequireDependencies } from "@clamat/build-tools/rollup";
+import { swc, json, rollup, replace, commonjs, progress, bundleStats, nodeResolve, importMetaAssets, nativeAddonLoader, generateBuildMetadata, dynamicRequireDependencies } from "@clamat/build-tools/rollup";
 import { Option, Command } from "commander";
 
 const cli = new Command()
@@ -26,6 +26,11 @@ if(cliOptions.mode == "compile") {
 			}),
 			nativeAddonLoader(),
 			importMetaAssets(),
+			replace({
+				preventAssignment: true,
+				values: Object.fromEntries(Object.entries(await generateBuildMetadata({ base: import.meta.dirname }))
+					.map(([k, v]) => [`import.meta.env.${k}`, JSON.stringify(v)] as const))
+			}),
 			progress(),
 			bundleStats()
 		]
