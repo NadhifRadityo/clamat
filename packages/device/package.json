@@ -7,9 +7,13 @@
 	"license": "ISC",
 	"type": "module",
 	"scripts": {
-		"compile": "tsx ./scripts/compile.ts",
+		"setup": "tsx ./scripts/setup.ts",
+		"build": "tsx ./scripts/build.ts",
 		"clean": "tsx ./scripts/clean.ts",
-		"drizzle-kit": "drizzle-kit"
+		"drizzle-kit": "drizzle-kit",
+		"turbo:setup": "cross-env pnpm run setup --platform ${CLAMAT_PLATFORM} --toolchain-raspios-name ${CLAMAT_TOOLCHAIN_RASPIOS_NAME}-devel",
+		"turbo:build": "cross-env pnpm run build",
+		"turbo:clean": "cross-env pnpm run clean"
 	},
 	"exports": {
 		".": "./src/index.ts",

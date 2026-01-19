@@ -6,10 +6,12 @@
 	"author": "Nadhif Radityo",
 	"license": "ISC",
 	"type": "module",
-	"scripts": {
-	},
+	"scripts": {},
 	"exports": {
 		".": "./src/index.ts",
+		"./commander": "./src/commander.ts",
+		"./dax": "./src/dax.ts",
+		"./ejs": "./src/ejs.ts",
 		"./rollup": "./src/rollup.ts"
 	},
 	"dependencies": {
@@ -22,6 +24,9 @@
 		"@swc/core": "^1.15.8",
 		"@types/estree": "^1.0.8",
 		"@web/rollup-plugin-import-meta-assets": "^2.3.0",
+		"commander": "^14.0.2",
+		"dax": "^0.44.2",
+		"ejs": "^4.0.1",
 		"estree-toolkit": "^1.7.13",
 		"estree-walker": "^3.0.3",
 		"fast-glob": "^3.3.3",
@@ -33,6 +38,7 @@
 		"rollup-plugin-progress": "^1.1.2"
 	},
 	"devDependencies": {
+		"@types/ejs": "^3.1.5",
 		"@types/picomatch": "^4.0.2"
 	}
 }

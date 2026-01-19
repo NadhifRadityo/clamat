@@ -1,6 +1,6 @@
 import path from "path";
+import { Command } from "@clamat/build-tools/commander";
 import { swc, json, rollup, replace, commonjs, progress, bundleStats, nodeResolve, importMetaAssets, nativeAddonLoader, generateBuildMetadata, dynamicRequireDependencies } from "@clamat/build-tools/rollup";
-import { Command } from "commander";
 
 const cli = new Command()
 	.parse();
@@ -34,7 +34,7 @@ const build = await rollup({
 	]
 });
 await build.write({
-	dir: path.join(baseDirectory, "dist"),
+	dir: path.join(baseDirectory, "dist/bin/bundle"),
 	format: "esm",
 	entryFileNames: "[name].mjs",
 	sourcemap: true

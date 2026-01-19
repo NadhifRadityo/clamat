@@ -1,0 +1,17 @@
+{
+	"$schema": "https://turborepo.dev/schema.json",
+	"extends": ["//"],
+	"tasks": {
+		"turbo:create-base-docker-image": {
+			"env": [
+				"CLAMAT_TOOLCHAIN_RASPIOS_URL", 
+				"CLAMAT_TOOLCHAIN_RASPIOS_NAME"
+			]
+		},
+		"turbo:create-devel-docker-image": {
+			"dependsOn": [
+				"turbo:create-base-docker-image"
+			]
+		}
+	}
+}

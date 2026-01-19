@@ -1,7 +1,7 @@
 import fs from "fs/promises";
 import path from "path";
+import { Option, Command } from "@clamat/build-tools/commander";
 import { x509, webcrypto } from "@clamat/shared/crypto";
-import { Option, Command } from "commander";
 
 const cli = new Command()
 	.addOption(new Option("-c, --csr <file>", "CSR file to sign").makeOptionMandatory())

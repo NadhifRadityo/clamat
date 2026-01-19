@@ -1,6 +1,6 @@
 import fs from "fs/promises";
 import path from "path";
-import { Command } from "commander";
+import { Command } from "@clamat/build-tools/commander";
 
 const cli = new Command()
 	.parse();

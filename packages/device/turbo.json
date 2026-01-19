@@ -1,0 +1,37 @@
+{
+	"$schema": "https://turborepo.dev/schema.json",
+	"extends": ["//"],
+	"tasks": {
+		"turbo:setup": {
+			"env": [
+				"CLAMAT_PLATFORM", 
+				"CLAMAT_TOOLCHAIN_*"
+			],
+			"inputs": [
+				"$TURBO_ROOT$/**/package.json", 
+				"$TURBO_ROOT$/pnpm-lock.yaml", 
+				"$TURBO_ROOT$/pnpm-workspace.yaml", 
+				"$TURBO_ROOT$/**/turbo.json", 
+				"$TURBO_ROOT$/tsconfig.json"
+			],
+			"outputs": [
+				"dist/image/**"
+			]
+		},
+		"turbo:build": {
+			"env": [
+				"CLAMAT_*", 
+				"!CLAMAT_PLATFORM", 
+				"!CLAMAT_TOOLCHAIN_*"
+			],
+			"inputs": [
+				"dist/image/**"
+			],
+			"outputs": [
+				"dist/bin/**"
+			]
+		},
+		"turbo:clean": {
+		}
+	}
+}

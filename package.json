@@ -10,21 +10,21 @@
 		"packages/*"
 	],
 	"scripts": {
-		"lint": "pnpm -r lint",
-		"build": "pnpm -r build"
+		"turbo": "turbo"
 	},
-	"packageManager": "pnpm@10.27.0+sha512.72d699da16b1179c14ba9e64dc71c9a40988cbdc65c264cb0e489db7de917f20dcf4d64d8723625f2969ba52d4b7e2a1170682d9ac2a5dcaeaab732b7e16f04a",
+	"packageManager": "pnpm@10.28.1+sha512.7d7dbbca9e99447b7c3bf7a73286afaaf6be99251eb9498baefa7d406892f67b879adb3a1d7e687fc4ccc1a388c7175fbaae567a26ab44d1067b54fcb0d6a316",
 	"devDependencies": {
 		"@eslint/compat": "^2.0.0",
 		"@eslint/js": "^9.39.2",
 		"@stylistic/eslint-plugin": "^5.6.1",
 		"@types/node": "^25.0.3",
-		"commander": "^14.0.2",
+		"cross-env": "^10.1.0",
 		"eslint": "^9.39.2",
 		"eslint-plugin-perfectionist": "^5.2.0",
 		"eslint-plugin-unused-imports": "^4.3.0",
 		"globals": "^17.0.0",
 		"tsx": "^4.21.0",
+		"turbo": "^2.7.5",
 		"typescript": "6.0.0-dev.20260111",
 		"typescript-eslint": "^8.51.0"
 	}

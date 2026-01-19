@@ -7,9 +7,12 @@
 	"license": "ISC",
 	"type": "module",
 	"scripts": {
-		"create-docker-image": "tsx ./scripts/createDockerImage.ts"
+		"create-base-docker-image": "tsx ./scripts/createBaseDockerImage.ts",
+		"create-devel-docker-image": "tsx ./scripts/createDevelDockerImage.ts",
+		"turbo:create-base-docker-image": "cross-env pnpm run create-base-docker-image --url ${CLAMAT_TOOLCHAIN_RASPIOS_URL} --name ${CLAMAT_TOOLCHAIN_RASPIOS_NAME}-base",
+		"turbo:create-devel-docker-image": "cross-env pnpm run create-devel-docker-image --base ${CLAMAT_TOOLCHAIN_RASPIOS_NAME}-base --name ${CLAMAT_TOOLCHAIN_RASPIOS_NAME}-devel"
 	},
-	"dependencies": {
-		"dax": "^0.44.2"
+	"devDependencies": {
+		"@clamat/build-tools": "workspace:*"
 	}
 }
