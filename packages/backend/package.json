@@ -7,8 +7,6 @@
 	"license": "ISC",
 	"type": "module",
 	"scripts": {
-		"lint": "eslint .",
-		"build": "node -e ''",
 		"generate-root-cert": "tsx ./scripts/generateRootCert.ts",
 		"generate-device-cert-request": "tsx ./scripts/generateDeviceCertRequest.ts",
 		"sign-device-cert-request": "tsx ./scripts/signDeviceCertRequest.ts"

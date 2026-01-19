@@ -129,7 +129,7 @@ sudo service NetworkManager restart
 1. `# sudo systemctl daemon-reload`
 1. `# sudo systemctl start docker docker.socket containerd`
 
-**Adding Raspberry Docker Context to your Host**
+**Controlling Raspberry Docker Context from your Host Machine**
 1. `# sudo systemctl stop docker docker.socket containerd`
 1. `# sudo nano /etc/docker/daemon.json`
 

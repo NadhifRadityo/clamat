@@ -7,8 +7,6 @@
 	"license": "ISC",
 	"type": "module",
 	"scripts": {
-		"lint": "eslint .",
-		"build": "node -e ''",
 		"create-docker-image": "tsx ./scripts/createDockerImage.ts"
 	},
 	"dependencies": {

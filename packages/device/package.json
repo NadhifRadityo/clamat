@@ -7,9 +7,8 @@
 	"license": "ISC",
 	"type": "module",
 	"scripts": {
-		"lint": "eslint .",
-		"build:compile": "tsx build.ts -m compile",
-		"build:clean": "tsx build.ts -m clean",
+		"compile": "tsx ./scripts/compile.ts",
+		"clean": "tsx ./scripts/clean.ts",
 		"drizzle-kit": "drizzle-kit"
 	},
 	"exports": {

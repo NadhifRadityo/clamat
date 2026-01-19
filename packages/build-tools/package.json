@@ -7,8 +7,6 @@
 	"license": "ISC",
 	"type": "module",
 	"scripts": {
-		"lint": "eslint .",
-		"build": "node -e ''"
 	},
 	"exports": {
 		".": "./src/index.ts",
