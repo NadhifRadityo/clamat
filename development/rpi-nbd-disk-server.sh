@@ -76,7 +76,7 @@ SOCAT_PID=$!
 echo "[*] socat PID: $SOCAT_PID"
 
 echo "[*] Mounting swap file"
-ssh "$RASPBERRY_DESTINATION" "sudo nbd-client 127.0.0.1 "$PORT" /dev/nbd1 && sudo partprobe /dev/nbd1 && sudo mkdir -p /mnt/nbd-disk && sudo mount /dev/nbd1p1 /mnt/nbd-disk"
+ssh "$RASPBERRY_DESTINATION" "sudo nbd-client 127.0.0.1 "$PORT" /dev/nbd1 && sudo partprobe /dev/nbd1 && sudo mkdir -p /mnt/nbd-disk && sudo mount /dev/nbd1p1 /mnt/nbd-disk && sudo chmod 755 /mnt/nbd-disk"
 
 # ---------- Bandwidth monitor ----------
 echo "[*] Monitoring tunnel bandwidth (Ctrl+C to stop)"

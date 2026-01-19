@@ -9,7 +9,7 @@
 	"scripts": {
 		"lint": "eslint .",
 		"build": "node -e ''",
-		"generate-docker-image": "tsx ./scripts/createDockerImage.ts"
+		"create-docker-image": "tsx ./scripts/createDockerImage.ts"
 	},
 	"dependencies": {
 		"dax": "^0.44.2"

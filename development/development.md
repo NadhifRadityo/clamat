@@ -95,7 +95,65 @@ sudo service NetworkManager restart
 1. `$ sudo apt install nbdkit socat nethogs`
 1. `# sudo apt install nbd-client socat`
 1. `$ chmod +x ./rpi-nbd-disk-server.sh`
-1. `$ sudo ./rpi-nbd-disk-server.sh <RASPBERRY_USER>@<RASPBERRY_APIPA_ADDRESS> <DISK_FILE>`. The script will attempt to SSH into raspberry pi to setup nbd-client and swapfile automatically. The partition will be available under /mnt/nbd-disk
+1. `$ sudo ./rpi-nbd-disk-server.sh <RASPBERRY_USER>@<RASPBERRY_APIPA_ADDRESS> <DISK_FILE>`. The script will attempt to SSH into raspberry pi to setup nbd-client and swapfile automatically. The partition will be available under `/mnt/nbd-disk`
 
 # Installing Docker in Raspberry Pi
-https://docs.docker.com/engine/install/debian/
+- https://docs.docker.com/engine/install/debian/
+- https://docs.docker.com/engine/install/linux-postinstall/ This is important if you want to manage Docker as a non-root user.
+
+**Stop Docker from starting automatically on boot**
+1. `# sudo systemctl disable docker.service docker.socket containerd.service`
+
+**Move Docker to Other Disk**
+1. `# sudo systemctl stop docker docker.socket containerd`
+1. `# sudo mkdir -p /mnt/nbd-disk/docker`
+1. `# sudo nano /etc/docker/daemon.json`
+
+   ```
+    {
+        "data-root": "/mnt/nbd-disk/docker"
+    }
+   ```
+
+1. `# sudo rsync -axP /var/lib/docker/ /mnt/nbd-disk/docker/`
+1. `# sudo mv /var/lib/docker /var/lib/docker.old`. For backup
+1. `# sudo mkdir -p /mnt/nbd-disk/containerd`
+1. `# sudo nano /etc/containerd/config.toml`
+
+    ```
+    root = "/mnt/nbd-disk/containerd"
+    ```
+
+1. `# sudo rsync -axP /var/lib/containerd/ /mnt/nbd-disk/containerd/`
+1. `# sudo mv /var/lib/containerd /var/lib/containerd.old`. For backup
+1. `# sudo systemctl daemon-reload`
+1. `# sudo systemctl start docker docker.socket containerd`
+
+**Adding Raspberry Docker Context to your Host**
+1. `# sudo systemctl stop docker docker.socket containerd`
+1. `# sudo nano /etc/docker/daemon.json`
+
+   ```
+    {
+        "hosts": ["unix:///var/run/docker.sock", "tcp://0.0.0.0:2375"]
+    }
+   ```
+
+1. `# sudo sed -i 's/\ -H\ fd:\/\///g' /lib/systemd/system/docker.service`. https://stackoverflow.com/questions/44052054/unable-to-start-docker-after-configuring-hosts-in-daemon-json
+1. `# sudo systemctl daemon-reload`
+1. `# sudo systemctl start docker docker.socket containerd`
+1. `$ docker context create raspberrypi --docker "host=tcp://<RASPBERRY_APIPA_ADDRESS>:2375"`
+1. `$/> docker context use raspberrypi`
+
+# Creating a New User with Home Directory in Another Disk
+1. `# sudo mkdir -p /mnt/nbd-disk/home/devel`
+1. `# sudo adduser --home /mnt/nbd-disk/home/devel devel`
+1. `# sudo usermod -aG sudo devel`
+1. `# sudo cp -r /etc/skel/. /mnt/nbd-disk/home/devel`
+1. `# sudo chown -R devel:devel /mnt/nbd-disk/home/devel`
+1. `# sudo usermod -aG docker devel`
+1. `# su - devel`
+
+# Installing NVM in Raspberry Pi
+- https://github.com/nvm-sh/nvm
+> The installation location will be based on the home directory `~`. Ensure you are creating a new `devel` user with home directory in `nbd-disk` to avoid running out of storage.
