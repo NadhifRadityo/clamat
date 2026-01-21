@@ -1,7 +1,10 @@
 packages:
   - packages/*
+  - development
 
 onlyBuiltDependencies:
   - '@swc/core'
+  - bun
   - core-js
   - esbuild
+  - node-pty

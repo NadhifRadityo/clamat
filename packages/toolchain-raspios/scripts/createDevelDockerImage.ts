@@ -1,7 +1,7 @@
 import fs from "fs/promises";
 import path from "path";
 import { Option, Command } from "@clamat/build-tools/commander";
-import { $, runCleanup, bindCleanup, cleanupCallbacks } from "@clamat/build-tools/dax";
+import { $, addCleanup, bindCleanup, runCleanupAndExit, compareDockerEtagLabels, DOCKER_IMAGE_NAME_REGEX } from "@clamat/build-tools/dax";
 import ejs from "@clamat/build-tools/ejs";
 
 bindCleanup();
@@ -15,27 +15,30 @@ const cliOptions = cli.opts<{
 	name: string;
 }>();
 
-if(!/^([a-z0-9]+(?:[._-][a-z0-9]+)*\/)([a-z0-9]+(?:[._-][a-z0-9]+)*)(?::([a-zA-Z0-9_][a-zA-Z0-9._-]{0,127}))?$/g.test(cliOptions.name))
+if(!DOCKER_IMAGE_NAME_REGEX.test(cliOptions.name))
 	throw new Error("Docker image name is not valid");
 await Promise.all(["docker"]
 	.map(b => $`which ${b}`.quiet().then(() => {}, () => { throw new Error(`Required binary not found: ${b}`); })));
+await fs.mkdir(path.join(import.meta.dirname, "temp"), { recursive: true });
 const tempDir = await fs.mkdtemp(path.join(import.meta.dirname, "temp/docker-"));
-cleanupCallbacks.push(async () => {
+addCleanup(async () => {
 	console.log("Removing temp directory");
 	await fs.rm(tempDir, { force: true, recursive: true });
 });
 
 console.log(`Checking if docker image ${cliOptions.base} exists`);
 const baseImageLabels = await $`docker image inspect -f '{{json .Config.Labels}}' ${cliOptions.base}`.json<Record<string, string> | null>();
-const baseImageEtags = Object.entries(baseImageLabels ?? {}).filter(([k]) => k.startsWith("ETAG_")).map(([_, v]) => v);
+const dockerfileTemplate = path.join(import.meta.dirname, "devel.template.dockerfile");
+const dockerfileTemplateEtag = await $`sha256sum ${dockerfileTemplate} | awk '{print $1}'`.text();
 
 console.log("Checking if image is already created");
 const createdImageLabels = await $`docker image inspect -f '{{json .Config.Labels}}' ${cliOptions.name}`.json<Record<string, string> | null>().catch(() => "NOT-AVAILABLE" as const);
 if(createdImageLabels != "NOT-AVAILABLE" && createdImageLabels != null) {
-	if(Object.entries(createdImageLabels).filter(([k]) => k.startsWith("ETAG_")).map(([_, v]) => v).some(e => baseImageEtags.includes(e))) {
-		console.log("Image already created. Exiting...");
-		await runCleanup();
-		process.exit(0);
+	if(compareDockerEtagLabels({ check: createdImageLabels, checkPrefix: "ETAG_BASE", against: baseImageLabels ?? {}, againstPrefix: "ETAG" })) {
+		if(createdImageLabels.ETAG_TEMPLATE == null || createdImageLabels.ETAG_TEMPLATE == dockerfileTemplateEtag) {
+			console.log("Image already created and etags matched. Exiting...");
+			await runCleanupAndExit();
+		}
 	}
 }
 if(createdImageLabels != "NOT-AVAILABLE") {
@@ -43,10 +46,10 @@ if(createdImageLabels != "NOT-AVAILABLE") {
 	await $`docker image rm ${cliOptions.name}`;
 }
 
-const dockerfileTemplate = path.join(import.meta.dirname, "devel.template.dockerfile");
 const dockerfileRendered = await ejs.renderFile(dockerfileTemplate, {
 	baseImage: cliOptions.base,
-	baseImageEtags: baseImageEtags
+	baseImageLabels: baseImageLabels,
+	dockerfileTemplateEtag: dockerfileTemplateEtag
 }, { async: true });
 const dockerImageDir = path.join(tempDir, "image");
 await fs.mkdir(dockerImageDir, { recursive: true });
@@ -57,4 +60,4 @@ await fs.writeFile(dockerfilePath, dockerfileRendered, "utf-8");
 console.log(`Building docker image ${cliOptions.name}`);
 await $`docker build -t ${cliOptions.name} ${dockerImageDir}`;
 
-await runCleanup();
+await runCleanupAndExit();

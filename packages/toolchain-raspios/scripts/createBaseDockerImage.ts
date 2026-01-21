@@ -1,9 +1,10 @@
 import fs0 from "fs";
 import fs from "fs/promises";
+import os from "os";
 import path from "path";
 import url from "url";
 import { Option, Command } from "@clamat/build-tools/commander";
-import { $, runCleanup, bindCleanup, cleanupCallbacks } from "@clamat/build-tools/dax";
+import { $, addCleanup, bindCleanup, runCleanupAndExit, compareDockerEtagLabels, DOCKER_IMAGE_NAME_REGEX } from "@clamat/build-tools/dax";
 
 bindCleanup();
 
@@ -16,12 +17,13 @@ const cliOptions = cli.opts<{
 	name: string;
 }>();
 
-if(!/^([a-z0-9]+(?:[._-][a-z0-9]+)*\/)([a-z0-9]+(?:[._-][a-z0-9]+)*)(?::([a-zA-Z0-9_][a-zA-Z0-9._-]{0,127}))?$/g.test(cliOptions.name))
+if(!DOCKER_IMAGE_NAME_REGEX.test(cliOptions.name))
 	throw new Error("Docker image name is not valid");
 await Promise.all(["unxz", "kpartx", "mount", "umount", "dmsetup", "losetup", "docker", "file", "tar", "sha256sum"]
 	.map(b => $`which ${b}`.quiet().then(() => {}, () => { throw new Error(`Required binary not found: ${b}`); })));
+await fs.mkdir(path.join(import.meta.dirname, "temp"), { recursive: true });
 const tempDir = await fs.mkdtemp(path.join(import.meta.dirname, "temp/docker-"));
-cleanupCallbacks.push(async () => {
+addCleanup(async () => {
 	console.log("Removing temp directory");
 	await fs.rm(tempDir, { force: true, recursive: true });
 });
@@ -31,11 +33,10 @@ const createdImageLabels = await $`docker image inspect -f '{{json .Config.Label
 const checkIfImageAlreadyCreated = async () => {
 	if(createdImageLabels == "NOT-AVAILABLE" || createdImageLabels == null)
 		return;
-	if(!Object.entries(createdImageLabels).filter(([k]) => k.startsWith("ETAG_")).map(([_, v]) => v).some(e => imageEtags.includes(e)))
+	if(!compareDockerEtagLabels({ check: createdImageLabels, checkPrefix: "ETAG_IMAGE", against: imageEtags }))
 		return;
 	console.log("Image already created. Exiting...");
-	await runCleanup();
-	process.exit(0);
+	await runCleanupAndExit();
 };
 const imageUrl = new URL(cliOptions.url);
 const imageEtags = [] as string[];
@@ -57,19 +58,25 @@ if(imageUrl.protocol == "http:" || imageUrl.protocol == "https:") {
 	await $`unxz -c ${imageXzPath} > ${$.path(imagePath)}`;
 	imageEtags.push(await $`sha256sum ${imagePath} | awk '{print $1}'`.text());
 	await checkIfImageAlreadyCreated();
-} else if(imageUrl.protocol == "file:" || imageUrl.protocol == "relative-file:") {
-	const file = imageUrl.protocol == "file:" ? url.fileURLToPath(imageUrl) : path.resolve(`./${imageUrl.pathname}`);
-	if(!fs0.existsSync(file))
-		throw new Error(`Cannot find file ${file}`);
-	if((await $`file ${file}`.text()).includes("XZ compressed data")) {
-		imageEtags.push(await $`sha256sum ${file} | awk '{print $1}'`.text());
+} else if(imageUrl.protocol == "file:") {
+	const filePath =
+		imageUrl.host == "" ? url.fileURLToPath(imageUrl) :
+			imageUrl.host == "." ? path.join(process.cwd(), imageUrl.pathname) :
+				imageUrl.host == "~" ? path.join(os.homedir(), imageUrl.pathname) :
+					null;
+	if(filePath == null)
+		throw new Error(`Invalid file url ${imageUrl.href}`);
+	if(!fs0.existsSync(filePath))
+		throw new Error(`Cannot find file ${filePath}`);
+	if((await $`file ${filePath}`.text()).includes("XZ compressed data")) {
+		imageEtags.push(await $`sha256sum ${filePath} | awk '{print $1}'`.text());
 		await checkIfImageAlreadyCreated();
-		console.log(`Decompressing file ${file}`);
-		await $`unxz -c ${file} > ${$.path(imagePath)}`;
+		console.log(`Decompressing file ${filePath}`);
+		await $`unxz -c ${filePath} > ${$.path(imagePath)}`;
 		imageEtags.push(await $`sha256sum ${imagePath} | awk '{print $1}'`.text());
 		await checkIfImageAlreadyCreated();
 	} else {
-		imagePath = file;
+		imagePath = filePath;
 		imageEtags.push(await $`sha256sum ${imagePath} | awk '{print $1}'`.text());
 		await checkIfImageAlreadyCreated();
 	}
@@ -81,32 +88,32 @@ if(createdImageLabels != "NOT-AVAILABLE") {
 }
 
 console.log("Mapping partitions");
-await $`sudo kpartx -d ${imagePath}`.then(() => {}, () => {});
+await $`sudo kpartx -d ${imagePath}`;
 const partitionMapping = await $`sudo kpartx -v -a ${imagePath}`.text();
-cleanupCallbacks.push(async () => {
+addCleanup(async () => {
 	console.log("Deleting partition mapping");
-	await $`sudo kpartx -d ${imagePath}`.then(() => {}, () => {});
+	await $`sudo kpartx -d ${imagePath}`;
 });
 console.log(`Detected partitions:\n${partitionMapping}\n`);
 const rootPartition = partitionMapping.match(/(loop\d+p2)/)?.[1];
 const bootPartition = partitionMapping.match(/(loop\d+p1)/)?.[1];
 if(rootPartition != null) {
-	cleanupCallbacks.push(async () => {
+	addCleanup(async () => {
 		console.log(`Unmapping root partition ${rootPartition}`);
-		await $`sudo dmsetup remove ${rootPartition}`.then(() => {}, () => {});
+		await $`sudo dmsetup remove ${rootPartition}`;
 	});
 }
 if(bootPartition != null) {
-	cleanupCallbacks.push(async () => {
+	addCleanup(async () => {
 		console.log(`Unmapping boot partition ${bootPartition}`);
-		await $`sudo dmsetup remove ${bootPartition}`.then(() => {}, () => {});
+		await $`sudo dmsetup remove ${bootPartition}`;
 	});
 }
 if(rootPartition != null && bootPartition != null) {
-	cleanupCallbacks.push(async () => {
+	addCleanup(async () => {
 		const loopDevice = `/dev/${(rootPartition ?? bootPartition).slice(0, -"p2".length)}`;
 		console.log(`Removing loop device ${loopDevice}`);
-		await $`sudo losetup -d ${loopDevice}`.then(() => {}, () => {});
+		await $`sudo losetup -d ${loopDevice}`;
 	});
 }
 if(rootPartition == null)
@@ -118,16 +125,16 @@ if(bootPartition != null)
 	await fs.mkdir(bootMountPath, { recursive: true });
 console.log(`Mounting root partition /dev/mapper/${rootPartition} to ${rootMountPath}`);
 await $`sudo mount -o ro -t ext4 ${`/dev/mapper/${rootPartition}`} ${rootMountPath}`;
-cleanupCallbacks.push(async () => {
+addCleanup(async () => {
 	console.log(`Unmounting root partition ${rootMountPath}`);
-	await $`sudo umount ${rootMountPath}`.then(() => {}, () => {});
+	await $`sudo umount ${rootMountPath}`;
 });
 if(bootPartition != null) {
 	console.log(`Mounting boot partition /dev/mapper/${bootPartition} to ${bootMountPath}`);
 	await $`sudo mount -o ro -t vfat ${`/dev/mapper/${bootPartition}`} ${bootMountPath}`;
-	cleanupCallbacks.push(async () => {
+	addCleanup(async () => {
 		console.log(`Unmounting boot partition ${bootMountPath}`);
-		await $`sudo umount ${bootMountPath}`.then(() => {}, () => {});
+		await $`sudo umount ${bootMountPath}`;
 	});
 }
 const detectBinary = await $`file ${path.join(rootMountPath, "bin/bash")}`.text();
@@ -135,6 +142,6 @@ console.log(`Detected binary architecture:\n${detectBinary}\n`);
 if(!detectBinary.includes("aarch64"))
 	throw new Error(`Unsupported architecture: ${detectBinary}`);
 console.log(`Importing docker image ${cliOptions.name}`);
-await $`sudo tar -C ${rootMountPath} -c . | docker import --platform linux/arm64 ${imageEtags.flatMap((e, i) => ["--change", `LABEL ETAG_${i}=${e}`])} - ${cliOptions.name}`;
+await $`sudo tar -C ${rootMountPath} -c . | docker import --platform linux/arm64 ${imageEtags.flatMap((e, i) => ["--change", `LABEL ETAG_IMAGE_${i}=${e}`])} - ${cliOptions.name}`;
 
-await runCleanup();
+await runCleanupAndExit();
