@@ -7,6 +7,7 @@
 	"license": "ISC",
 	"type": "module",
 	"scripts": {
+		"rpi-9p-server": "tsx ./scripts/rpi9pServer.ts",
 		"rpi-nbd-disk-server": "tsx ./scripts/rpiNbdDiskServer.ts",
 		"rpi-nbd-ram-server": "tsx ./scripts/rpiNbdRamServer.ts"
 	},

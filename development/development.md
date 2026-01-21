@@ -123,6 +123,12 @@ sudo service NetworkManager restart
 
 > You may encounter problem while the script attempts to connect to FRP server. Please see [Debugging FRP QUIC Connection between WSL and Windows](#debugging-frp-quic-connection-between-wsl-and-windows)
 
+## Setting-up Project Files Access over Network on RaspberryPi
+1. `$ sudo apt install diod`
+1. Ensure FRP is installed on your host machine
+1. Ensure FRP is installed on your raspberry pi
+1. `$ pnpm rpi-9p-server --target <RASPBERRY_USER>@<RASPBERRY_APIPA_ADDRESS> --export /project/dir/on/host/machine --mount /mnt/nbd-disk/home/devel/clamat-remote`
+
 ## Debugging FRP QUIC Connection between WSL and Windows
 A low MTU can break QUIC/KCP/UDP traffic.
 - The `quic-go` implementation performs MTU discovery and may refuse to send packets if the MTU is too small.
