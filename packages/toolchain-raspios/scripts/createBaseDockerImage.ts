@@ -19,7 +19,7 @@ const cliOptions = cli.opts<{
 
 if(!DOCKER_IMAGE_NAME_REGEX.test(cliOptions.name))
 	throw new Error("Docker image name is not valid");
-await Promise.all(["unxz", "kpartx", "mount", "umount", "dmsetup", "losetup", "docker", "file", "tar", "sha256sum"]
+await Promise.all(["unxz", "kpartx", "mount", "umount", "dmsetup", "losetup", "docker", "file", "tar", "sha256sum", "awk"]
 	.map(b => $`which ${b}`.quiet().then(() => {}, () => { throw new Error(`Required binary not found: ${b}`); })));
 await fs.mkdir(path.join(import.meta.dirname, "temp"), { recursive: true });
 const tempDir = await fs.mkdtemp(path.join(import.meta.dirname, "temp/docker-"));

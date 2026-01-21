@@ -268,12 +268,12 @@ export function compareDockerEtagLabels(
 		{ against: string[], againstPrefix?: undefined }
 	)
 ) {
-	const checkEtags = Array.isArray(check) ? Object.fromEntries(check.map((v, i) => [`_${i}`, v] as const)) :
-		checkPrefix != null ? Object.fromEntries(Object.entries(check).filter(([k]) => k.startsWith(checkPrefix)).map(([k, v]) => [k.slice(checkPrefix.length), v] as const)) :
-			check;
-	const againstEtags = Array.isArray(against) ? Object.fromEntries(against.map((v, i) => [`_${i}`, v] as const)) :
-		againstPrefix != null ? Object.fromEntries(Object.entries(against).filter(([k]) => k.startsWith(againstPrefix)).map(([k, v]) => [k.slice(againstPrefix.length), v] as const)) :
-			against;
+	const checkEtags = Array.isArray(check) ? Object.fromEntries(check.filter(v => v != null).map((v, i) => [`_${i}`, v] as const)) :
+		Object.fromEntries(Object.entries(check).filter(([k, v]) => v != "" && (checkPrefix == null || k.startsWith(checkPrefix)))
+			.map(([k, v]) => [checkPrefix == null ? k : k.slice(checkPrefix.length), v] as const));
+	const againstEtags = Array.isArray(against) ? Object.fromEntries(against.filter(v => v != null).map((v, i) => [`_${i}`, v] as const)) :
+		Object.fromEntries(Object.entries(against).filter(([k, v]) => v != "" && (againstPrefix == null || k.startsWith(againstPrefix)))
+			.map(([k, v]) => [againstPrefix == null ? k : k.slice(againstPrefix.length), v] as const));
 	const keysGroups = Object.values([...new Set([...Object.keys(checkEtags), ...Object.keys(againstEtags)])]
 		.reduce((r, c) => { (r[c.replace(/_\d+$/, "")] ??= []).push(c); return r; }, {} as Record<string, string[]>))
 		.map(ks => [ks.filter(k => k in checkEtags), ks.filter(k => k in againstEtags)] as const);
