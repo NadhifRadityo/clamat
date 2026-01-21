@@ -85,17 +85,44 @@ sudo service NetworkManager restart
 1. Ensure you can ping raspberry pi using its APIPA address on the windows machine. You can also see the ethernet lights are also blinking while doing this
 1. You should also be able to ping raspberry pi from WSL (since WSL default route will go to windows vEthernet switch)
 
-# Setting-up Swap File over Network on RaspberryPi
-1. `$ sudo apt install nbdkit socat nethogs`
-1. `# sudo apt install nbd-client socat`
-1. `$ chmod +x ./rpi-nbd-ram-server.sh`
-1. `$ sudo ./rpi-nbd-ram-server.sh <RASPBERRY_USER>@<RASPBERRY_APIPA_ADDRESS>`. The script will attempt to SSH into raspberry pi to setup nbd-client and swapfile automatically
+# Installing Fast Reverse Protocol (FRP) on WSL
+1. `$ curl -LO https://github.com/fatedier/frp/releases/download/v0.66.0/frp_0.66.0_linux_amd64.tar.gz`
+1. `$ tar -zxvf frp_0.66.0_linux_amd64.tar.gz`
+1. `$ sudo cp ./frp_0.66.0_linux_amd64/frps /usr/bin/`
+1. `$ sudo cp ./frp_0.66.0_linux_amd64/frpc /usr/bin/`
 
-# Setting-up Additional Remote Disk over Network
-1. `$ sudo apt install nbdkit socat nethogs`
-1. `# sudo apt install nbd-client socat`
-1. `$ chmod +x ./rpi-nbd-disk-server.sh`
-1. `$ sudo ./rpi-nbd-disk-server.sh <RASPBERRY_USER>@<RASPBERRY_APIPA_ADDRESS> <DISK_FILE>`. The script will attempt to SSH into raspberry pi to setup nbd-client and swapfile automatically. The partition will be available under `/mnt/nbd-disk`
+# Installing Fast Reverse Protocol (FRP) on Raspberry Pi
+1. `# curl -LO https://github.com/fatedier/frp/releases/download/v0.66.0/frp_0.66.0_linux_arm64.tar.gz`
+1. `# tar -zxvf frp_0.66.0_linux_arm64.tar.gz`
+1. `# sudo cp ./frp_0.66.0_linux_arm64/frps /usr/bin/`
+1. `# sudo cp ./frp_0.66.0_linux_arm64/frpc /usr/bin/`
+
+# Setting-up Swap File over Network on RaspberryPi
+1. `$ sudo apt install nbdkit nethogs`
+1. Ensure FRP is installed on your host machine
+1. `# sudo apt install nbd-client`
+1. Ensure FRP is installed on your raspberry pi
+1. `$ pnpm rpi-nbd-ram-server --target <RASPBERRY_USER>@<RASPBERRY_APIPA_ADDRESS> --ram ramfs://./temp/nbd-ram-0 --size 2GiB`. The script will attempt to SSH into raspberry pi to setup nbd-client and swapfile automatically
+
+> You may encounter problem while the script attempts to connect to FRP server. Please see [Debugging FRP QUIC Connection between WSL and Windows](#debugging-frp-quic-connection-between-wsl-and-windows)
+
+# Setting-up Additional Remote Disk over Network on RaspberryPi
+1. `$ sudo apt install nbdkit nethogs`
+1. Ensure FRP is installed on your host machine
+1. `# sudo apt install nbd-client`
+1. Ensure FRP is installed on your raspberry pi
+1. `$ pnpm rpi-nbd-disk-server --target <RASPBERRY_USER>@<RASPBERRY_APIPA_ADDRESS> --disk <DISK_FILE> --size 16GiB --mount /mnt/nbd-disk`. The script will attempt to SSH into raspberry pi to setup nbd-client and mount automatically. The partition will be available under `/mnt/nbd-disk`
+
+> You may encounter problem while the script attempts to connect to FRP server. Please see [Debugging FRP QUIC Connection between WSL and Windows](#debugging-frp-quic-connection-between-wsl-and-windows)
+
+# Debugging FRP QUIC Connection between WSL and Windows
+A low MTU can break QUIC/KCP/UDP traffic.
+- The `quic-go` implementation performs MTU discovery and may refuse to send packets if the MTU is too small.
+- `kcp`, on the other hand, continues sending packets, but further analysis with Wireshark shows that these UDP packets become fragmented.
+- On Windows, these fragmented UDP packets are dropped, causing the connection to fail.
+
+In WSL, the default MTU may be as low as 1280, which is insufficient when FRP is built assuming the standard 1500 MTU.
+Increase the MTU of your WSL network interface: `sudo ip link set dev eth0 mtu 1500`
 
 # Installing Docker in Raspberry Pi
 - https://docs.docker.com/engine/install/debian/

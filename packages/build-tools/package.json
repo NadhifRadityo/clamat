@@ -12,6 +12,7 @@
 		"./commander": "./src/commander.ts",
 		"./dax": "./src/dax.ts",
 		"./ejs": "./src/ejs.ts",
+		"./proper-lockfile": "./src/proper-lockfile.ts",
 		"./rollup": "./src/rollup.ts"
 	},
 	"dependencies": {
@@ -33,12 +34,14 @@
 		"magic-string": "^0.30.21",
 		"oxc-walker": "^0.6.0",
 		"picomatch": "^4.0.3",
+		"proper-lockfile": "^4.1.2",
 		"rollup": "^4.55.1",
 		"rollup-plugin-bundle-stats": "^4.21.8",
 		"rollup-plugin-progress": "^1.1.2"
 	},
 	"devDependencies": {
 		"@types/ejs": "^3.1.5",
-		"@types/picomatch": "^4.0.2"
+		"@types/picomatch": "^4.0.2",
+		"@types/proper-lockfile": "^4.1.4"
 	}
 }
