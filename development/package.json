@@ -7,8 +7,8 @@
 	"license": "ISC",
 	"type": "module",
 	"scripts": {
-		"rpi-nbd-disk-server": "tsx ./rpiNbdDiskServer.ts",
-		"rpi-nbd-ram-server": "tsx ./rpiNbdRamServer.ts"
+		"rpi-nbd-disk-server": "tsx ./scripts/rpiNbdDiskServer.ts",
+		"rpi-nbd-ram-server": "tsx ./scripts/rpiNbdRamServer.ts"
 	},
 	"devDependencies": {
 		"@clamat/build-tools": "workspace:*"
